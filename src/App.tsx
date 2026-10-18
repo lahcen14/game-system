@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { QUESTIONS_BANK, PRIZE_LADDER, STAGE_INFO, Question } from './data/questions';
 import { soundFX } from './utils/soundEffects';
+import { CelebrationParticles } from './components/CelebrationParticles';
 
 type GameState = 'TITLE_MENU' | 'PLAYING' | 'STAGE_TRANSITION' | 'GAME_OVER' | 'VICTORY' | 'WALKED_AWAY';
 type ActiveView = 'arena' | 'bank';
@@ -319,6 +320,17 @@ export default function App() {
 
   return (
     <div className="min-h-screen flex flex-col bg-[#020510] text-slate-100 relative overflow-x-hidden">
+      {/* Celebratory Particles Animation on Correct Answer & Victory */}
+      <CelebrationParticles
+        active={
+          activeView === 'arena' &&
+          (answerStatus === 'CORRECT' ||
+            gameState === 'STAGE_TRANSITION' ||
+            gameState === 'VICTORY')
+        }
+        mode={gameState === 'VICTORY' ? 'continuous' : 'burst'}
+      />
+
       {/* Studio Spotlight Backdrop */}
       <div
         className="pointer-events-none fixed inset-0 z-0"
