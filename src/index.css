@@ -14,32 +14,43 @@
   }
 }
 
-/* Authentic Millionaire Hexagonal Question & Option Capsules */
-.wwtbam-question-plate {
-  position: relative;
-  background: linear-gradient(180deg, #06122e 0%, #0d255c 48%, #040d24 52%, #081a42 100%);
-  border-top: 2px solid #93c5fd;
-  border-bottom: 2px solid #60a5fa;
-  box-shadow:
-    0 0 25px rgba(37, 99, 235, 0.45),
-    inset 0 0 18px rgba(59, 130, 246, 0.35);
-  clip-path: polygon(28px 0%, calc(100% - 28px) 0%, 100% 50%, calc(100% - 28px) 100%, 28px 100%, 0% 50%);
-}
-
+/* Authentic Millionaire Hexagonal Question & Option Capsules - Mobile & Desktop Safe */
 .wwtbam-question-border-wrap {
   position: relative;
   padding: 2px;
   background: linear-gradient(90deg, #60a5fa 0%, #fde047 50%, #60a5fa 100%);
-  clip-path: polygon(29px 0%, calc(100% - 29px) 0%, 100% 50%, calc(100% - 29px) 100%, 29px 100%, 0% 50%);
+  clip-path: polygon(16px 0%, calc(100% - 16px) 0%, 100% 50%, calc(100% - 16px) 100%, 16px 100%, 0% 50%);
   filter: drop-shadow(0 8px 24px rgba(0, 0, 0, 0.8));
+}
+
+.wwtbam-question-plate {
+  position: relative;
+  width: 100%;
+  background: linear-gradient(180deg, #06122e 0%, #0d255c 48%, #040d24 52%, #081a42 100%);
+  box-shadow:
+    0 0 25px rgba(37, 99, 235, 0.45),
+    inset 0 0 18px rgba(59, 130, 246, 0.35);
+  clip-path: polygon(15px 0%, calc(100% - 15px) 0%, 100% 50%, calc(100% - 15px) 100%, 15px 100%, 0% 50%);
 }
 
 .wwtbam-option-wrap {
   position: relative;
   padding: 2px;
   background: linear-gradient(90deg, #93c5fd 0%, #fbbf24 50%, #93c5fd 100%);
-  clip-path: polygon(22px 0%, calc(100% - 22px) 0%, 100% 50%, calc(100% - 22px) 100%, 22px 100%, 0% 50%);
+  clip-path: polygon(14px 0%, calc(100% - 14px) 0%, 100% 50%, calc(100% - 14px) 100%, 14px 100%, 0% 50%);
   transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1), filter 0.15s ease;
+}
+
+@media (min-width: 640px) {
+  .wwtbam-question-border-wrap {
+    clip-path: polygon(28px 0%, calc(100% - 28px) 0%, 100% 50%, calc(100% - 28px) 100%, 28px 100%, 0% 50%);
+  }
+  .wwtbam-question-plate {
+    clip-path: polygon(27px 0%, calc(100% - 27px) 0%, 100% 50%, calc(100% - 27px) 100%, 27px 100%, 0% 50%);
+  }
+  .wwtbam-option-wrap {
+    clip-path: polygon(22px 0%, calc(100% - 22px) 0%, 100% 50%, calc(100% - 22px) 100%, 22px 100%, 0% 50%);
+  }
 }
 
 .wwtbam-option-wrap:hover:not(.disabled-wrap) {
@@ -49,10 +60,15 @@
 
 .wwtbam-option-plate {
   width: 100%;
-  height: 100%;
   background: linear-gradient(180deg, #071433 0%, #0e2761 48%, #051029 52%, #091d4a 100%);
-  clip-path: polygon(21px 0%, calc(100% - 21px) 0%, 100% 50%, calc(100% - 21px) 100%, 21px 100%, 0% 50%);
+  clip-path: polygon(13px 0%, calc(100% - 13px) 0%, 100% 50%, calc(100% - 13px) 100%, 13px 100%, 0% 50%);
   transition: background 0.15s ease;
+}
+
+@media (min-width: 640px) {
+  .wwtbam-option-plate {
+    clip-path: polygon(21px 0%, calc(100% - 21px) 0%, 100% 50%, calc(100% - 21px) 100%, 21px 100%, 0% 50%);
+  }
 }
 
 .wwtbam-option-wrap:hover:not(.disabled-wrap) .wwtbam-option-plate {
@@ -105,20 +121,6 @@
   }
 }
 
-@keyframes slowRotate {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
 .animate-correct-flash {
   animation: correctFlash 1.1s ease-in-out;
 }
-
-.animate-emblem-spin {
-  animation: slowRotate 50s linear infinite;
-}
-

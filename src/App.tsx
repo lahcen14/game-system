@@ -13,6 +13,8 @@ import {
   ShieldCheck,
   ArrowLeft,
   LogOut,
+  ListOrdered,
+  X,
 } from 'lucide-react';
 import { QUESTIONS_BANK, PRIZE_LADDER, STAGE_INFO, Question } from './data/questions';
 import { soundFX } from './utils/soundEffects';
@@ -45,6 +47,8 @@ export default function App() {
   const [friendModalData, setFriendModalData] = useState<Question['friendAdvice'] | null>(null);
   const [audiencePollData, setAudiencePollData] = useState<number[] | null>(null);
   const [isMuted, setIsMuted] = useState<boolean>(false);
+  const [isWelcomeMusicPlaying, setIsWelcomeMusicPlaying] = useState<boolean>(false);
+  const [showMobileLadder, setShowMobileLadder] = useState<boolean>(false);
   const [selectedBankStage, setSelectedBankStage] = useState<1 | 2 | 3>(1);
 
   const currentQuestion: Question = QUESTIONS_BANK[currentQuestionIndex];
@@ -60,6 +64,12 @@ export default function App() {
     if (currentQuestionIndex >= 5) return PRIZE_LADDER[4].amount;
     return '0';
   }, [currentQuestionIndex]);
+
+  useEffect(() => {
+    return soundFX.subscribeWelcomeMusicState((playing) => {
+      setIsWelcomeMusicPlaying(playing);
+    });
+  }, []);
 
   // Play the opening Main Theme automatically as soon as the game opens on TITLE_MENU
   useEffect(() => {
@@ -97,7 +107,7 @@ export default function App() {
       const t = window.setTimeout(() => {
         setVisibleOptionsCount(i);
         soundFX.playOptionAppear(i - 1);
-      }, i * 520);
+      }, i * 450);
       timers.push(t);
     }
 
@@ -122,6 +132,7 @@ export default function App() {
 
   const startNewGame = () => {
     soundFX.stopAll();
+    setShowMobileLadder(false);
     setActiveView('arena');
     setCurrentQuestionIndex(0);
     setSelectedOption(null);
@@ -249,6 +260,67 @@ export default function App() {
     setGameState('WALKED_AWAY');
   };
 
+  const renderLifelineOvals = () => (
+    <div className="grid grid-cols-3 gap-2 w-full max-w-[260px]">
+      <button
+        type="button"
+        onClick={handleUseFiftyFifty}
+        disabled={lifelinesUsed.fiftyFifty || answerStatus !== 'IDLE' || visibleOptionsCount < 4}
+        title="50:50"
+        className={`relative h-10 sm:h-12 rounded-[50%] border-2 flex items-center justify-center font-mono-num font-black text-xs sm:text-sm transition-transform cursor-pointer ${
+          lifelinesUsed.fiftyFifty
+            ? 'border-slate-700 bg-slate-900/70 text-slate-500 cursor-not-allowed'
+            : 'border-amber-400 bg-[radial-gradient(circle,#1e40af_0%,#071330_85%)] text-amber-300 hover:scale-105 shadow-[0_0_12px_rgba(59,130,246,0.5)]'
+        }`}
+      >
+        <span>50:50</span>
+        {lifelinesUsed.fiftyFifty && (
+          <span className="absolute inset-0 flex items-center justify-center text-rose-500 text-xl sm:text-2xl font-black pointer-events-none">
+            ✕
+          </span>
+        )}
+      </button>
+
+      <button
+        type="button"
+        onClick={handleUsePhoneFriend}
+        disabled={lifelinesUsed.phoneFriend || answerStatus !== 'IDLE' || visibleOptionsCount < 4}
+        title="اتصال بصديق"
+        className={`relative h-10 sm:h-12 rounded-[50%] border-2 flex items-center justify-center transition-transform cursor-pointer ${
+          lifelinesUsed.phoneFriend
+            ? 'border-slate-700 bg-slate-900/70 text-slate-500 cursor-not-allowed'
+            : 'border-amber-400 bg-[radial-gradient(circle,#1e40af_0%,#071330_85%)] text-amber-300 hover:scale-105 shadow-[0_0_12px_rgba(59,130,246,0.5)]'
+        }`}
+      >
+        <PhoneCall className="w-4 h-4 sm:w-5 sm:h-5" />
+        {lifelinesUsed.phoneFriend && (
+          <span className="absolute inset-0 flex items-center justify-center text-rose-500 text-xl sm:text-2xl font-black pointer-events-none">
+            ✕
+          </span>
+        )}
+      </button>
+
+      <button
+        type="button"
+        onClick={handleUseAskAudience}
+        disabled={lifelinesUsed.askAudience || answerStatus !== 'IDLE' || visibleOptionsCount < 4}
+        title="رأي الجمهور"
+        className={`relative h-10 sm:h-12 rounded-[50%] border-2 flex items-center justify-center transition-transform cursor-pointer ${
+          lifelinesUsed.askAudience
+            ? 'border-slate-700 bg-slate-900/70 text-slate-500 cursor-not-allowed'
+            : 'border-amber-400 bg-[radial-gradient(circle,#1e40af_0%,#071330_85%)] text-amber-300 hover:scale-105 shadow-[0_0_12px_rgba(59,130,246,0.5)]'
+        }`}
+      >
+        <Users className="w-4 h-4 sm:w-5 sm:h-5" />
+        {lifelinesUsed.askAudience && (
+          <span className="absolute inset-0 flex items-center justify-center text-rose-500 text-xl sm:text-2xl font-black pointer-events-none">
+            ✕
+          </span>
+        )}
+      </button>
+    </div>
+  );
+
   const renderHexOption = (idx: number) => {
     const isRevealed = visibleOptionsCount > idx;
     const isEliminated = eliminatedOptions.includes(idx);
@@ -276,17 +348,17 @@ export default function App() {
     return (
       <div
         key={idx}
-        className={`wwtbam-option-wrap flex-1 min-w-0 ${wrapStateClass} ${
-          isEliminated ? 'opacity-40' : ''
+        className={`wwtbam-option-wrap w-full md:flex-1 min-w-0 ${wrapStateClass} ${
+          isEliminated ? 'opacity-35' : ''
         }`}
       >
         <button
           type="button"
           onClick={() => handleSelectAnswer(idx)}
           disabled={answerStatus !== 'IDLE' || isEliminated || !isRevealed}
-          className="wwtbam-option-plate px-6 sm:px-8 py-3.5 sm:py-4 flex items-center justify-between gap-3 text-right cursor-pointer disabled:cursor-default min-h-[58px] sm:min-h-[64px]"
+          className="wwtbam-option-plate px-4 sm:px-7 py-3 sm:py-4 flex items-center justify-between gap-2.5 text-right cursor-pointer disabled:cursor-default min-h-[54px] sm:min-h-[64px]"
         >
-          <div className="flex items-center gap-2.5 min-w-0">
+          <div className="flex items-center gap-2 min-w-0 w-full">
             <span
               className={`text-xs sm:text-sm shrink-0 ${
                 answerStatus === 'LOCKED' && isSelected ? 'text-white' : 'text-amber-400'
@@ -295,7 +367,7 @@ export default function App() {
               ◆
             </span>
             <span
-              className={`font-black text-base sm:text-lg shrink-0 ${
+              className={`font-black text-sm sm:text-lg shrink-0 ${
                 answerStatus === 'LOCKED' && isSelected
                   ? 'text-slate-950'
                   : answerStatus !== 'IDLE' && (isCorrectOption || isSelected)
@@ -306,7 +378,7 @@ export default function App() {
               {OPTION_LETTERS[idx]}:
             </span>
             <span
-              className={`text-sm sm:text-base font-bold leading-snug transition-opacity duration-200 ${
+              className={`text-xs sm:text-base font-bold leading-snug transition-opacity duration-200 ${
                 isRevealed && !isEliminated ? 'opacity-100' : 'opacity-0'
               }`}
             >
@@ -340,20 +412,20 @@ export default function App() {
         }}
       />
 
-      {/* Top Bar Contract: 3 Clean Zones */}
-      <header className="relative z-20 flex items-center justify-between gap-8 px-6 lg:px-10 py-3.5 border-b border-blue-400/20 bg-[#020510]/90 backdrop-blur-md">
+      {/* Top Bar Contract: Mobile & Desktop Responsive */}
+      <header className="relative z-20 flex items-center justify-between gap-2 sm:gap-8 px-3 sm:px-6 lg:px-10 py-3 border-b border-blue-400/20 bg-[#020510]/90 backdrop-blur-md">
         <a
           href="#arena"
           onClick={(e) => {
             e.preventDefault();
             setActiveView('arena');
           }}
-          className="text-lg md:text-xl font-extrabold tracking-tight text-amber-300 whitespace-nowrap shrink-0"
+          className="text-sm sm:text-lg md:text-xl font-extrabold tracking-tight text-amber-300 whitespace-nowrap shrink-0"
         >
           من سيربح المليون
         </a>
 
-        <nav className="flex items-center gap-7 text-sm font-semibold text-slate-300">
+        <nav className="flex items-center gap-3 sm:gap-7 text-xs sm:text-sm font-semibold text-slate-300">
           <button
             onClick={() => setActiveView('arena')}
             className={`hover:text-amber-300 transition-colors whitespace-nowrap shrink-0 pb-1 border-b-2 cursor-pointer ${
@@ -372,7 +444,7 @@ export default function App() {
           </button>
         </nav>
 
-        <div className="flex items-center gap-3 shrink-0">
+        <div className="flex items-center gap-2 shrink-0">
           <button
             onClick={toggleMute}
             aria-label={isMuted ? 'تشغيل الصوت' : 'كتم الصوت'}
@@ -382,33 +454,59 @@ export default function App() {
           </button>
           <button
             onClick={startNewGame}
-            className="px-4 py-2 text-xs md:text-sm font-bold text-slate-950 bg-amber-400 hover:bg-amber-300 rounded-lg transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+            className="px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-bold text-slate-950 bg-amber-400 hover:bg-amber-300 rounded-lg transition-colors whitespace-nowrap shrink-0 cursor-pointer"
           >
-            {gameState === 'TITLE_MENU' ? 'ابدأ اللعب' : 'إعادة المحاولة'}
+            {gameState === 'TITLE_MENU' ? 'ابدأ اللعب' : 'إعادة'}
           </button>
         </div>
       </header>
 
       {/* Main Content Area */}
-      <main className="relative z-10 flex-1 max-w-[1440px] w-full mx-auto px-4 sm:px-6 lg:px-10 py-5 md:py-7 flex flex-col">
+      <main className="relative z-10 flex-1 max-w-[1440px] w-full mx-auto px-2.5 sm:px-6 lg:px-10 py-3 sm:py-6 flex flex-col">
         {activeView === 'arena' && (
           <>
             {/* STATE 1: CLEAN STUDIO TITLE SCREEN */}
             {gameState === 'TITLE_MENU' && (
-              <div className="max-w-3xl w-full mx-auto my-auto bg-[radial-gradient(circle_at_50%_30%,rgba(29,78,216,0.38)_0%,rgba(7,18,46,0.95)_70%)] border border-blue-400/35 rounded-3xl p-8 sm:p-14 flex flex-col items-center text-center shadow-2xl">
+              <div
+                onClick={() => {
+                  if (!isWelcomeMusicPlaying && !isMuted) {
+                    soundFX.playMainTheme();
+                  }
+                }}
+                className="max-w-3xl w-full mx-auto my-auto bg-[radial-gradient(circle_at_50%_30%,rgba(29,78,216,0.38)_0%,rgba(7,18,46,0.95)_70%)] border border-blue-400/35 rounded-3xl p-6 sm:p-14 flex flex-col items-center text-center shadow-2xl"
+              >
                 {/* Iconic Studio Emblem */}
-                <div className="w-52 h-52 sm:w-60 sm:h-60 rounded-full border-4 border-amber-400 bg-[radial-gradient(circle,#1d4ed8_0%,#071330_72%,#020617_100%)] shadow-[0_0_70px_rgba(37,99,235,0.8),inset_0_0_30px_rgba(251,191,36,0.4)] flex flex-col items-center justify-center p-6 mb-8">
-                  <div className="text-2xl sm:text-3xl font-black text-amber-300 leading-tight mb-2">
+                <div className="w-44 h-44 sm:w-60 sm:h-60 rounded-full border-4 border-amber-400 bg-[radial-gradient(circle,#1d4ed8_0%,#071330_72%,#020617_100%)] shadow-[0_0_70px_rgba(37,99,235,0.8),inset_0_0_30px_rgba(251,191,36,0.4)] flex flex-col items-center justify-center p-5 mb-6 sm:mb-8 cursor-pointer">
+                  <div className="text-xl sm:text-3xl font-black text-amber-300 leading-tight mb-2">
                     من سيربح المليون
                   </div>
-                  <div className="text-sm sm:text-base font-bold text-white">
+                  <div className="text-xs sm:text-base font-bold text-white">
                     أنظمة التشغيل
                   </div>
                 </div>
 
+                {/* If browser blocked initial autoplay before first touch, show a 1-tap audio unlock button */}
+                {!isWelcomeMusicPlaying && !isMuted && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      soundFX.playMainTheme();
+                    }}
+                    className="mb-4 flex items-center gap-2 px-4 py-2 rounded-full bg-blue-950/90 border border-amber-400/60 text-amber-300 text-xs sm:text-sm font-bold animate-bounce cursor-pointer"
+                  >
+                    <Volume2 className="w-4 h-4" />
+                    <span>اضغط هنا لتفعيل موسيقى شارة البداية</span>
+                  </button>
+                )}
+
                 <button
-                  onClick={startNewGame}
-                  className="flex items-center gap-3 px-10 py-4 bg-gradient-to-l from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-black text-lg rounded-xl shadow-xl transition-transform active:scale-95 cursor-pointer whitespace-nowrap shrink-0"
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    startNewGame();
+                  }}
+                  className="flex items-center gap-3 px-8 sm:px-10 py-3.5 sm:py-4 bg-gradient-to-l from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-black text-base sm:text-lg rounded-xl shadow-xl transition-transform active:scale-95 cursor-pointer whitespace-nowrap shrink-0"
                 >
                   <Play className="w-5 h-5 fill-current" />
                   <span>ابدأ المسابقة</span>
@@ -418,22 +516,22 @@ export default function App() {
 
             {/* STATE 2: STAGE TRANSITION */}
             {gameState === 'STAGE_TRANSITION' && (
-              <div className="max-w-2xl w-full mx-auto my-auto bg-[#07122e]/95 border-2 border-amber-400 rounded-2xl p-8 sm:p-12 text-center shadow-2xl">
-                <div className="w-16 h-16 rounded-2xl bg-amber-400/15 border border-amber-400/40 flex items-center justify-center mx-auto mb-5">
-                  <ShieldCheck className="w-9 h-9 text-amber-300" />
+              <div className="max-w-2xl w-full mx-auto my-auto bg-[#07122e]/95 border-2 border-amber-400 rounded-2xl p-6 sm:p-12 text-center shadow-2xl">
+                <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-amber-400/15 border border-amber-400/40 flex items-center justify-center mx-auto mb-5">
+                  <ShieldCheck className="w-8 h-8 sm:w-9 sm:h-9 text-amber-300" />
                 </div>
 
                 <div className="text-sm font-bold text-emerald-400 mb-2">
                   الرصيد المضمون: {safeHavenPrize}
                 </div>
 
-                <h2 className="text-2xl sm:text-3xl font-black text-white mb-8">
+                <h2 className="text-xl sm:text-3xl font-black text-white mb-8">
                   {STAGE_INFO[currentQuestion.stage].title}
                 </h2>
 
                 <button
                   onClick={() => setGameState('PLAYING')}
-                  className="inline-flex items-center gap-3 px-8 py-4 bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-base rounded-xl transition-colors cursor-pointer whitespace-nowrap shrink-0"
+                  className="inline-flex items-center gap-3 px-8 py-3.5 sm:py-4 bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-base rounded-xl transition-colors cursor-pointer whitespace-nowrap shrink-0"
                 >
                   <span>السؤال {currentQuestionIndex + 1}</span>
                   <ArrowLeft className="w-5 h-5" />
@@ -443,33 +541,93 @@ export default function App() {
 
             {/* STATE 3: AUTHENTIC TV SHOW GAMEPLAY LAYOUT */}
             {gameState === 'PLAYING' && (
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch flex-1">
-                {/* Main TV Broadcast Stage (9 Columns) */}
-                <div className="lg:col-span-9 bg-[radial-gradient(circle_at_50%_32%,rgba(29,78,216,0.34)_0%,rgba(6,15,38,0.94)_68%,#030817_100%)] border border-blue-400/30 rounded-2xl flex flex-col justify-between overflow-hidden shadow-2xl relative py-5">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6 items-stretch flex-1">
+                {/* Main TV Broadcast Stage (9 Columns on Desktop, Full Width on Mobile) */}
+                <div className="lg:col-span-9 bg-[radial-gradient(circle_at_50%_32%,rgba(29,78,216,0.34)_0%,rgba(6,15,38,0.94)_68%,#030817_100%)] border border-blue-400/30 rounded-2xl flex flex-col justify-between overflow-hidden shadow-2xl relative py-3.5 sm:py-5">
                   {/* Top Bar Inside Stage */}
-                  <div className="px-6 flex flex-wrap items-center justify-between gap-3 z-10">
+                  <div className="px-3.5 sm:px-6 flex flex-wrap items-center justify-between gap-2 z-10">
                     <div className="text-xs sm:text-sm font-bold text-amber-300">
                       {currentQuestion.stageTitle}
                     </div>
 
-                    {currentQuestionIndex > 0 && answerStatus === 'IDLE' && (
+                    <div className="flex items-center gap-2">
+                      {currentQuestionIndex > 0 && answerStatus === 'IDLE' && (
+                        <button
+                          onClick={handleWalkAway}
+                          className="flex items-center gap-1 px-2.5 sm:px-3.5 py-1.5 rounded-lg bg-slate-900/90 hover:bg-slate-800 text-amber-300 border border-amber-400/40 text-xs font-bold transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+                        >
+                          <LogOut className="w-3.5 h-3.5" />
+                          <span>انسحاب ({earnedPrize})</span>
+                        </button>
+                      )}
+
+                      {/* Mobile Button to Open/View Full 15-Level Prize Ladder */}
                       <button
-                        onClick={handleWalkAway}
-                        className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-slate-900/90 hover:bg-slate-800 text-amber-300 border border-amber-400/40 text-xs font-bold transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+                        type="button"
+                        onClick={() => setShowMobileLadder(!showMobileLadder)}
+                        className="lg:hidden flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#0d2254] border border-amber-400/50 text-amber-300 text-xs font-bold cursor-pointer whitespace-nowrap shrink-0"
                       >
-                        <LogOut className="w-3.5 h-3.5" />
-                        <span>انسحاب ({earnedPrize})</span>
+                        <ListOrdered className="w-3.5 h-3.5" />
+                        <span>سلم الجوائز ({currentQuestionIndex + 1}/15)</span>
                       </button>
-                    )}
+                    </div>
                   </div>
 
+                  {/* Mobile Lifelines Bar (Directly visible above the stage on phones & tablets!) */}
+                  <div className="lg:hidden px-3.5 pt-3 flex items-center justify-center z-10">
+                    {renderLifelineOvals()}
+                  </div>
+
+                  {/* Mobile Collapsible Prize Ladder Modal/Drawer */}
+                  {showMobileLadder && (
+                    <div className="lg:hidden mx-3.5 mt-3 p-4 rounded-xl bg-[#050d24]/98 border-2 border-amber-400/70 z-30 shadow-2xl">
+                      <div className="flex items-center justify-between mb-2 pb-2 border-b border-blue-900/60">
+                        <span className="text-xs font-black text-amber-300">
+                          سُلّم الجوائز (السؤال الحالي: {currentQuestionIndex + 1})
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setShowMobileLadder(false)}
+                          className="p-1 text-slate-300 hover:text-white"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-3 gap-1.5 text-xs">
+                        {PRIZE_LADDER.map((tier, idx) => {
+                          const isCurrent = idx === currentQuestionIndex;
+                          const isPassed = idx < currentQuestionIndex;
+                          return (
+                            <div
+                              key={tier.level}
+                              className={`px-2 py-1 rounded flex items-center justify-between font-mono-num ${
+                                isCurrent
+                                  ? 'bg-amber-400 text-slate-950 font-black'
+                                  : isPassed
+                                  ? 'text-emerald-400 bg-emerald-950/30 font-bold'
+                                  : tier.isSafeHaven
+                                  ? 'text-white bg-blue-950/60 font-bold'
+                                  : 'text-amber-300/90 bg-slate-900/50'
+                              }`}
+                            >
+                              <span>{tier.level}.</span>
+                              <span>{tier.amount}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Center Studio Stage: Emblem + Active Lifeline Overlays + Next Question Prompt */}
-                  <div className="my-4 px-6 flex flex-col items-center justify-center min-h-[210px] z-10">
+                  <div className="my-3 sm:my-4 px-3.5 sm:px-6 flex flex-col items-center justify-center min-h-[130px] sm:min-h-[200px] z-10">
                     {!friendModalData && !audiencePollData && answerStatus !== 'CORRECT' && (
                       <div className="flex flex-col items-center text-center">
-                        <div className="relative w-36 h-36 sm:w-44 sm:h-44 rounded-full border-4 border-amber-400/90 bg-[radial-gradient(circle,#1e40af_0%,#091536_70%,#020617_100%)] shadow-[0_0_55px_rgba(37,99,235,0.75),inset_0_0_25px_rgba(251,191,36,0.35)] flex flex-col items-center justify-center p-4">
-                          <div className="text-sm font-bold text-blue-200">من سيربح المليون</div>
-                          <div className="text-xl sm:text-2xl font-mono-num font-black text-amber-300 my-1">
+                        <div className="relative w-28 h-28 sm:w-44 sm:h-44 rounded-full border-4 border-amber-400/90 bg-[radial-gradient(circle,#1e40af_0%,#091536_70%,#020617_100%)] shadow-[0_0_55px_rgba(37,99,235,0.75),inset_0_0_25px_rgba(251,191,36,0.35)] flex flex-col items-center justify-center p-3 sm:p-4">
+                          <div className="text-[11px] sm:text-sm font-bold text-blue-200">
+                            سؤال {currentQuestionIndex + 1}
+                          </div>
+                          <div className="text-lg sm:text-2xl font-mono-num font-black text-amber-300 my-0.5 sm:my-1">
                             {currentPrizeTier.amount}
                           </div>
                         </div>
@@ -478,17 +636,17 @@ export default function App() {
 
                     {/* Active Lifeline Overlay 1: Phone a Friend */}
                     {friendModalData && answerStatus !== 'CORRECT' && (
-                      <div className="w-full max-w-2xl bg-[#071538]/95 border-2 border-amber-400 rounded-2xl p-5 shadow-2xl">
+                      <div className="w-full max-w-2xl bg-[#071538]/95 border-2 border-amber-400 rounded-2xl p-4 sm:p-5 shadow-2xl">
                         <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center gap-2 text-amber-300 font-extrabold text-sm sm:text-base">
-                            <PhoneCall className="w-4 h-4" />
+                          <div className="flex items-center gap-2 text-amber-300 font-extrabold text-xs sm:text-base">
+                            <PhoneCall className="w-4 h-4 shrink-0" />
                             <span>{friendModalData.name}</span>
                           </div>
                           <span className="text-xs font-mono-num text-emerald-300 font-bold">
                             {friendModalData.confidence}%
                           </span>
                         </div>
-                        <p className="text-sm sm:text-base text-white leading-relaxed">
+                        <p className="text-xs sm:text-base text-white leading-relaxed">
                           &ldquo;{friendModalData.message}&rdquo;
                         </p>
                       </div>
@@ -496,21 +654,21 @@ export default function App() {
 
                     {/* Active Lifeline Overlay 2: Audience Poll Chart */}
                     {audiencePollData && answerStatus !== 'CORRECT' && (
-                      <div className="w-full max-w-xl bg-[#071538]/95 border-2 border-amber-400 rounded-2xl p-4 sm:p-5 shadow-2xl">
-                        <div className="flex items-center justify-between mb-3">
-                          <div className="flex items-center gap-2 text-amber-300 font-extrabold text-sm">
+                      <div className="w-full max-w-xl bg-[#071538]/95 border-2 border-amber-400 rounded-2xl p-3.5 sm:p-5 shadow-2xl">
+                        <div className="flex items-center justify-between mb-2.5">
+                          <div className="flex items-center gap-2 text-amber-300 font-extrabold text-xs sm:text-sm">
                             <Users className="w-4 h-4" />
                             <span>رأي الجمهور</span>
                           </div>
                         </div>
 
-                        <div className="grid grid-cols-4 gap-4 items-end h-32 pt-3 px-4 bg-[#040c24] rounded-xl border border-blue-900/60">
+                        <div className="grid grid-cols-4 gap-3 sm:gap-4 items-end h-28 sm:h-32 pt-3 px-3 sm:px-4 bg-[#040c24] rounded-xl border border-blue-900/60">
                           {audiencePollData.map((pct, idx) => (
                             <div key={idx} className="flex flex-col items-center gap-1 h-full justify-end">
-                              <span className="text-xs font-mono-num font-bold text-amber-300">
+                              <span className="text-[11px] sm:text-xs font-mono-num font-bold text-amber-300">
                                 {pct}%
                               </span>
-                              <div className="w-full max-w-[42px] bg-slate-900 rounded-t h-16 flex items-end overflow-hidden border border-blue-500/30">
+                              <div className="w-full max-w-[38px] bg-slate-900 rounded-t h-14 sm:h-16 flex items-end overflow-hidden border border-blue-500/30">
                                 <div
                                   className="w-full bg-gradient-to-t from-blue-600 via-amber-500 to-amber-300 rounded-t transition-all duration-300"
                                   style={{ height: `${pct}%` }}
@@ -527,15 +685,15 @@ export default function App() {
 
                     {/* Correct Answer Next Question Action */}
                     {answerStatus === 'CORRECT' && (
-                      <div className="w-full max-w-xl bg-emerald-950/90 border-2 border-emerald-400 rounded-2xl p-5 shadow-2xl flex items-center justify-between gap-4">
-                        <div className="flex items-center gap-2 text-emerald-300 font-black text-lg">
-                          <CheckCircle2 className="w-6 h-6 shrink-0" />
+                      <div className="w-full max-w-xl bg-emerald-950/90 border-2 border-emerald-400 rounded-2xl p-4 sm:p-5 shadow-2xl flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
+                        <div className="flex items-center gap-2 text-emerald-300 font-black text-base sm:text-lg">
+                          <CheckCircle2 className="w-5 h-5 sm:w-6 sm:h-6 shrink-0" />
                           <span>إجابة صحيحة — {currentPrizeTier.amount}</span>
                         </div>
 
                         <button
                           onClick={handleNextQuestion}
-                          className="px-6 py-3 bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-sm rounded-xl shadow-lg transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+                          className="w-full sm:w-auto px-6 py-3 bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-sm rounded-xl shadow-lg transition-colors whitespace-nowrap shrink-0 cursor-pointer"
                         >
                           {currentQuestionIndex + 1 === QUESTIONS_BANK.length
                             ? 'استلام المليون'
@@ -546,21 +704,21 @@ export default function App() {
                   </div>
 
                   {/* ==================== LOWER-THIRD AUTHENTIC TV QUESTION & OPTIONS ==================== */}
-                  <div className="w-full space-y-3 sm:space-y-3.5 z-10">
+                  <div className="w-full space-y-2.5 sm:space-y-3.5 px-2 sm:px-0 z-10">
                     {/* Full-Width Question Plate with Horizontal Connecting Lines */}
                     <div className="flex items-center w-full">
-                      <div className="wwtbam-line w-4 sm:w-10 shrink-0" />
-                      <div className="wwtbam-question-border-wrap flex-1">
-                        <div className="wwtbam-question-plate px-8 sm:px-12 py-5 sm:py-6 min-h-[84px] sm:min-h-[96px] flex items-center justify-center text-center">
+                      <div className="hidden sm:block wwtbam-line w-4 sm:w-10 shrink-0" />
+                      <div className="wwtbam-question-border-wrap flex-1 min-w-0">
+                        <div className="wwtbam-question-plate px-5 sm:px-12 py-4 sm:py-6 min-h-[72px] sm:min-h-[96px] flex items-center justify-center text-center">
                           <p
-                            className="text-lg sm:text-xl md:text-2xl font-extrabold text-white leading-relaxed"
+                            className="text-base sm:text-xl md:text-2xl font-extrabold text-white leading-relaxed"
                             style={{ textWrap: 'balance' }}
                           >
                             {currentQuestion.question}
                           </p>
                         </div>
                       </div>
-                      <div className="wwtbam-line w-4 sm:w-10 shrink-0" />
+                      <div className="hidden sm:block wwtbam-line w-4 sm:w-10 shrink-0" />
                     </div>
 
                     {/* Row 1 of Hexagonal Options: أ and ب */}
@@ -583,75 +741,11 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* Right Sidebar: Authentic Oval Lifelines + 15-Rung Millionaire Money Tree */}
-                <aside className="lg:col-span-3 bg-[#050d24]/95 border border-blue-400/35 rounded-2xl p-4 sm:p-5 flex flex-col justify-between shadow-2xl">
+                {/* Desktop Right Sidebar: Authentic Oval Lifelines + 15-Rung Millionaire Money Tree */}
+                <aside className="hidden lg:flex lg:col-span-3 bg-[#050d24]/95 border border-blue-400/35 rounded-2xl p-5 flex-col justify-between shadow-2xl">
                   <div>
-                    <div className="grid grid-cols-3 gap-2 mb-4 pb-3 border-b border-blue-900/60">
-                      <button
-                        onClick={handleUseFiftyFifty}
-                        disabled={
-                          lifelinesUsed.fiftyFifty ||
-                          answerStatus !== 'IDLE' ||
-                          visibleOptionsCount < 4
-                        }
-                        title="50:50"
-                        className={`relative h-12 rounded-[50%] border-2 flex items-center justify-center font-mono-num font-black text-xs sm:text-sm transition-transform cursor-pointer ${
-                          lifelinesUsed.fiftyFifty
-                            ? 'border-slate-700 bg-slate-900/70 text-slate-500 cursor-not-allowed'
-                            : 'border-amber-400 bg-[radial-gradient(circle,#1e40af_0%,#071330_85%)] text-amber-300 hover:scale-105 shadow-[0_0_12px_rgba(59,130,246,0.5)]'
-                        }`}
-                      >
-                        <span>50:50</span>
-                        {lifelinesUsed.fiftyFifty && (
-                          <span className="absolute inset-0 flex items-center justify-center text-rose-500 text-2xl font-black pointer-events-none">
-                            ✕
-                          </span>
-                        )}
-                      </button>
-
-                      <button
-                        onClick={handleUsePhoneFriend}
-                        disabled={
-                          lifelinesUsed.phoneFriend ||
-                          answerStatus !== 'IDLE' ||
-                          visibleOptionsCount < 4
-                        }
-                        title="اتصال بصديق"
-                        className={`relative h-12 rounded-[50%] border-2 flex items-center justify-center transition-transform cursor-pointer ${
-                          lifelinesUsed.phoneFriend
-                            ? 'border-slate-700 bg-slate-900/70 text-slate-500 cursor-not-allowed'
-                            : 'border-amber-400 bg-[radial-gradient(circle,#1e40af_0%,#071330_85%)] text-amber-300 hover:scale-105 shadow-[0_0_12px_rgba(59,130,246,0.5)]'
-                        }`}
-                      >
-                        <PhoneCall className="w-5 h-5" />
-                        {lifelinesUsed.phoneFriend && (
-                          <span className="absolute inset-0 flex items-center justify-center text-rose-500 text-2xl font-black pointer-events-none">
-                            ✕
-                          </span>
-                        )}
-                      </button>
-
-                      <button
-                        onClick={handleUseAskAudience}
-                        disabled={
-                          lifelinesUsed.askAudience ||
-                          answerStatus !== 'IDLE' ||
-                          visibleOptionsCount < 4
-                        }
-                        title="رأي الجمهور"
-                        className={`relative h-12 rounded-[50%] border-2 flex items-center justify-center transition-transform cursor-pointer ${
-                          lifelinesUsed.askAudience
-                            ? 'border-slate-700 bg-slate-900/70 text-slate-500 cursor-not-allowed'
-                            : 'border-amber-400 bg-[radial-gradient(circle,#1e40af_0%,#071330_85%)] text-amber-300 hover:scale-105 shadow-[0_0_12px_rgba(59,130,246,0.5)]'
-                        }`}
-                      >
-                        <Users className="w-5 h-5" />
-                        {lifelinesUsed.askAudience && (
-                          <span className="absolute inset-0 flex items-center justify-center text-rose-500 text-2xl font-black pointer-events-none">
-                            ✕
-                          </span>
-                        )}
-                      </button>
+                    <div className="flex justify-center mb-4 pb-3 border-b border-blue-900/60">
+                      {renderLifelineOvals()}
                     </div>
 
                     {/* 15-Level Classic Millionaire Money Tree */}
@@ -672,7 +766,7 @@ export default function App() {
                         return (
                           <div
                             key={tier.level}
-                            className={`flex items-center justify-between px-2.5 py-1 text-xs sm:text-[13px] transition-colors ${textClass}`}
+                            className={`flex items-center justify-between px-2.5 py-1 text-[13px] transition-colors ${textClass}`}
                           >
                             <div className="flex items-center gap-2">
                               <span
@@ -710,12 +804,12 @@ export default function App() {
 
             {/* STATE 4: GAME OVER SCREEN */}
             {gameState === 'GAME_OVER' && (
-              <div className="max-w-xl w-full mx-auto my-auto bg-[#07122e]/95 border-2 border-rose-500/70 rounded-2xl p-8 sm:p-10 text-center shadow-2xl">
+              <div className="max-w-xl w-full mx-auto my-auto bg-[#07122e]/95 border-2 border-rose-500/70 rounded-2xl p-6 sm:p-10 text-center shadow-2xl">
                 <div className="w-16 h-16 rounded-2xl bg-rose-500/15 border border-rose-500/40 flex items-center justify-center mx-auto mb-5">
                   <XCircle className="w-10 h-10 text-rose-400" />
                 </div>
 
-                <h2 className="text-3xl font-black text-white mb-6">
+                <h2 className="text-2xl sm:text-3xl font-black text-white mb-6">
                   انتهت اللعبة
                 </h2>
 
@@ -738,17 +832,17 @@ export default function App() {
 
             {/* STATE 5: WALKED AWAY SCREEN */}
             {gameState === 'WALKED_AWAY' && (
-              <div className="max-w-xl w-full mx-auto my-auto bg-[#07122e]/95 border-2 border-amber-400 rounded-2xl p-8 sm:p-10 text-center shadow-2xl">
+              <div className="max-w-xl w-full mx-auto my-auto bg-[#07122e]/95 border-2 border-amber-400 rounded-2xl p-6 sm:p-10 text-center shadow-2xl">
                 <div className="w-16 h-16 rounded-2xl bg-amber-400/15 border border-amber-400/40 flex items-center justify-center mx-auto mb-5">
                   <Award className="w-10 h-10 text-amber-300" />
                 </div>
 
-                <h2 className="text-3xl font-black text-white mb-6">
+                <h2 className="text-2xl sm:text-3xl font-black text-white mb-6">
                   الرصيد النهائي
                 </h2>
 
                 <div className="mb-8 p-6 bg-[#040c21] border border-amber-500/40 rounded-xl">
-                  <div className="text-4xl font-mono-num font-black text-amber-300">
+                  <div className="text-3xl sm:text-4xl font-mono-num font-black text-amber-300">
                     {earnedPrize}
                   </div>
                 </div>
@@ -765,12 +859,12 @@ export default function App() {
 
             {/* STATE 6: MILLION VICTORY SCREEN */}
             {gameState === 'VICTORY' && (
-              <div className="max-w-2xl w-full mx-auto my-auto bg-gradient-to-b from-[#0f2557] to-[#050d24] border-2 border-amber-400 rounded-2xl p-8 sm:p-12 text-center shadow-2xl">
+              <div className="max-w-2xl w-full mx-auto my-auto bg-gradient-to-b from-[#0f2557] to-[#050d24] border-2 border-amber-400 rounded-2xl p-6 sm:p-12 text-center shadow-2xl">
                 <div className="w-20 h-20 rounded-2xl bg-amber-400/20 border-2 border-amber-300 flex items-center justify-center mx-auto mb-6">
                   <Trophy className="w-11 h-11 text-amber-300" />
                 </div>
 
-                <h2 className="text-3xl sm:text-5xl font-black text-amber-300 mb-8">
+                <h2 className="text-2xl sm:text-5xl font-black text-amber-300 mb-8">
                   مبروك المليون! (1,000,000)
                 </h2>
 
@@ -788,16 +882,16 @@ export default function App() {
 
         {/* ==================== VIEW 2: QUESTION BANK (ANSWERS HIDDEN) ==================== */}
         {activeView === 'bank' && (
-          <div className="space-y-6">
-            <div className="flex items-center justify-between gap-4 bg-[#07122e]/90 border border-blue-400/30 rounded-2xl p-5">
-              <h1 className="text-xl font-black text-white">بنك الأسئلة</h1>
+          <div className="space-y-4 sm:space-y-6">
+            <div className="flex flex-wrap items-center justify-between gap-3 bg-[#07122e]/90 border border-blue-400/30 rounded-2xl p-4 sm:p-5">
+              <h1 className="text-lg sm:text-xl font-black text-white">بنك الأسئلة</h1>
 
-              <div className="flex items-center gap-1.5 p-1.5 bg-[#040a1c] border border-slate-800 rounded-xl">
+              <div className="flex items-center gap-1.5 p-1 bg-[#040a1c] border border-slate-800 rounded-xl">
                 {[1, 2, 3].map((st) => (
                   <button
                     key={st}
                     onClick={() => setSelectedBankStage(st as 1 | 2 | 3)}
-                    className={`px-4 py-2 text-xs sm:text-sm font-bold rounded-lg transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
+                    className={`px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-bold rounded-lg transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
                       selectedBankStage === st
                         ? 'bg-amber-400 text-slate-950 shadow-sm'
                         : 'text-slate-300 hover:text-white'
@@ -813,19 +907,19 @@ export default function App() {
               {QUESTIONS_BANK.filter((q) => q.stage === selectedBankStage).map((q) => (
                 <div
                   key={q.id}
-                  className="bg-[#07122e]/90 border border-slate-800 rounded-2xl p-6 space-y-4"
+                  className="bg-[#07122e]/90 border border-slate-800 rounded-2xl p-4 sm:p-6 space-y-4"
                 >
-                  <h3 className="text-lg font-bold text-white">
+                  <h3 className="text-base sm:text-lg font-bold text-white">
                     {q.id}. {q.question}
                   </h3>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
                     {q.options.map((opt, i) => (
                       <div
                         key={i}
-                        className="p-3.5 rounded-xl border bg-[#040b1e] border-blue-900/50 text-slate-200 text-sm font-semibold flex items-center gap-2"
+                        className="p-3 sm:p-3.5 rounded-xl border bg-[#040b1e] border-blue-900/50 text-slate-200 text-xs sm:text-sm font-semibold flex items-center gap-2"
                       >
-                        <span className="text-amber-400 font-black">
+                        <span className="text-amber-400 font-black shrink-0">
                           ◆ {OPTION_LETTERS[i]}:
                         </span>
                         <span>{opt}</span>

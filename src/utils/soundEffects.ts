@@ -1,5 +1,5 @@
 // Authentic "Who Wants to Be a Millionaire" Soundtrack & Sound Effects Manager
-// Uses the real broadcast MP3 audio files stored in /sounds/
+// Uses the real broadcast MP3 audio files stored in /sounds/ with mobile Safari/Chrome gesture unlock
 
 type SoundKey =
   | 'main_theme'
@@ -36,11 +36,13 @@ const SOUND_PATHS: Record<SoundKey, string> = {
 
 class SoundManager {
   public isMuted: boolean = false;
+  public isWelcomeMusicPlaying: boolean = false;
   private audioCache: Partial<Record<SoundKey, HTMLAudioElement>> = {};
   private currentBgAudio: HTMLAudioElement | null = null;
   private currentStingAudio: HTMLAudioElement | null = null;
   private ctx: AudioContext | null = null;
   private pendingUnlockCleanup: (() => void) | null = null;
+  private listeners: Set<(playing: boolean) => void> = new Set();
 
   constructor() {
     if (typeof window !== 'undefined') {
@@ -50,6 +52,19 @@ class SoundManager {
         this.audioCache[key] = audio;
       });
     }
+  }
+
+  public subscribeWelcomeMusicState(cb: (playing: boolean) => void) {
+    this.listeners.add(cb);
+    cb(this.isWelcomeMusicPlaying);
+    return () => {
+      this.listeners.delete(cb);
+    };
+  }
+
+  private notifyWelcomeState(playing: boolean) {
+    this.isWelcomeMusicPlaying = playing;
+    this.listeners.forEach((cb) => cb(playing));
   }
 
   private getAudio(key: SoundKey): HTMLAudioElement | null {
@@ -95,6 +110,7 @@ class SoundManager {
       this.currentBgAudio.currentTime = 0;
       this.currentBgAudio = null;
     }
+    this.notifyWelcomeState(false);
   }
 
   private playSting(key: SoundKey, volume = 0.85) {
@@ -114,7 +130,7 @@ class SoundManager {
     audio.play().catch(() => {});
   }
 
-  // Plays the opening Main Theme automatically when the game opens
+  // Plays the opening Main Theme automatically when the game opens, or unlocks on first mobile/desktop gesture
   public playMainTheme() {
     this.stopAll();
     if (this.isMuted) return;
@@ -122,26 +138,50 @@ class SoundManager {
     if (!bg) return;
 
     bg.loop = true;
-    bg.volume = 0.75;
+    bg.volume = 0.8;
     bg.currentTime = 0;
     bg.muted = this.isMuted;
     this.currentBgAudio = bg;
 
-    bg.play().catch(() => {
-      // If browser blocks initial un-interacted autoplay, start immediately on first user pointer/key event
-      const unlockHandler = () => {
-        this.clearPendingUnlock();
-        if (this.currentBgAudio === bg && !this.isMuted) {
-          bg.play().catch(() => {});
-        }
-      };
-      window.addEventListener('pointerdown', unlockHandler, { once: true });
-      window.addEventListener('keydown', unlockHandler, { once: true });
-      this.pendingUnlockCleanup = () => {
-        window.removeEventListener('pointerdown', unlockHandler);
-        window.removeEventListener('keydown', unlockHandler);
-      };
+    const tryPlay = () => {
+      if (this.currentBgAudio !== bg || this.isMuted) return;
+      const playPromise = bg.play();
+      if (playPromise !== undefined) {
+        playPromise
+          .then(() => {
+            this.notifyWelcomeState(true);
+            this.clearPendingUnlock();
+          })
+          .catch(() => {
+            this.notifyWelcomeState(false);
+          });
+      }
+    };
+
+    tryPlay();
+
+    // Register universal touch/click/key unlock listeners for mobile and desktop browsers
+    const events = ['click', 'touchstart', 'touchend', 'pointerdown', 'keydown'];
+    const unlockHandler = () => {
+      if (this.currentBgAudio === bg && !this.isMuted && bg.paused) {
+        bg.play()
+          .then(() => {
+            this.notifyWelcomeState(true);
+            this.clearPendingUnlock();
+          })
+          .catch(() => {});
+      }
+    };
+
+    events.forEach((evt) => {
+      document.addEventListener(evt, unlockHandler, { capture: true, passive: true });
     });
+
+    this.pendingUnlockCleanup = () => {
+      events.forEach((evt) => {
+        document.removeEventListener(evt, unlockHandler, { capture: true });
+      });
+    };
   }
 
   // Starts the real Millionaire looping question background music according to question level (0..14)
