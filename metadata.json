@@ -1,0 +1,6 @@
+{
+  "name": "من سيربح المليون - أنظمة التشغيل",
+  "description": "لعبة تعليمية تفاعلية بأسلوب برنامج من سيربح المليون لمراجعة درس أنظمة التشغيل عبر 3 مراحل تدريجية مع وسائل المساعدة والمؤثرات الصوتية.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
